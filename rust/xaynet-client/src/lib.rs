@@ -61,6 +61,8 @@ pub mod api;
 mod participant;
 pub use participant::{Participant, Task};
 
+mod multipart;
+
 #[derive(Clone, Debug)]
 /// A primitive model cached on the heap.
 ///

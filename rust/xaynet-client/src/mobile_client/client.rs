@@ -9,12 +9,15 @@ use crate::{
         Sum2,
         Update,
     },
+    multipart::Chunker,
     ClientError,
 };
 use derive_more::From;
 use xaynet_core::{common::RoundParameters, crypto::ByteObject, mask::Model, InitError};
 
 use crate::PetError;
+
+pub const MAX_MESSAGE_SIZE: usize = 2048;
 
 #[async_trait]
 pub trait LocalModel {
@@ -45,6 +48,26 @@ impl<Type> ClientState<Type> {
     fn reset(self) -> ClientState<Awaiting> {
         warn!("reset client");
         ClientState::<Awaiting>::new(self.participant.reset(), self.round_params)
+    }
+
+    async fn send_message<T: ApiClient>(
+        &self,
+        api: &mut T,
+        data: Vec<u8>,
+    ) -> Result<(), <T as ApiClient>::Error> {
+        if data.len() > MAX_MESSAGE_SIZE {
+            debug!("message is too large to be sent as is");
+            let chunker = Chunker::new(&data, MAX_MESSAGE_SIZE);
+            for id in 0..chunker.nb_chunks() {
+                let chunk = chunker.get_chunk(id);
+                debug!("sending chunk {}", id);
+                api.send_message(chunk.to_vec()).await?;
+                debug!("chunk {} sent", id);
+            }
+        } else {
+            api.send_message(data).await?;
+        }
+        Ok(())
     }
 }
 
@@ -125,7 +148,7 @@ impl ClientState<Sum> {
             .seal_message(&self.round_params.pk, &sum_msg);
 
         debug!("sending sum message");
-        api.send_message(sealed_msg).await?;
+        self.send_message(api, sealed_msg).await?;
         debug!("sum message sent");
         Ok(())
     }
@@ -186,7 +209,7 @@ impl ClientState<Update> {
             .seal_message(&self.round_params.pk, &upd_msg);
 
         debug!("sending update message");
-        api.send_message(sealed_msg).await?;
+        self.send_message(api, sealed_msg).await?;
         info!("update participant completed a round");
         Ok(())
     }
@@ -242,7 +265,7 @@ impl ClientState<Sum2> {
             .seal_message(&self.round_params.pk, &sum2_msg);
 
         debug!("sending sum2 message");
-        api.send_message(sealed_msg).await?;
+        self.send_message(api, sealed_msg).await?;
         info!("sum participant completed a round");
         Ok(())
     }
