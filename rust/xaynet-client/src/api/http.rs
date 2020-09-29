@@ -132,9 +132,15 @@ impl From<::std::num::ParseIntError> for HttpApiClientError {
 impl ApiClient for HttpApiClient {
     type Error = HttpApiClientError;
 
-    async fn get_round_params(&mut self) -> Result<RoundParameters, Self::Error> {
+    async fn get_round_params(&self) -> Result<RoundParameters, Self::Error> {
         let url = format!("{}/params", self.address);
-        let resp = self.client.get(&url).send().await?.error_for_status()?;
+        let resp = self
+            .client
+            .clone()
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?;
         if let StatusCode::OK = resp.status() {
             let body = resp.bytes().await?; //
             Ok(bincode::deserialize(&body[..])?)
@@ -143,9 +149,15 @@ impl ApiClient for HttpApiClient {
         }
     }
 
-    async fn get_sums(&mut self) -> Result<Option<SumDict>, Self::Error> {
+    async fn get_sums(&self) -> Result<Option<SumDict>, Self::Error> {
         let url = format!("{}/sums", self.address);
-        let resp = self.client.get(&url).send().await?.error_for_status()?;
+        let resp = self
+            .client
+            .clone()
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?;
         match resp.status() {
             StatusCode::OK => {
                 let body = resp.bytes().await?;
@@ -157,7 +169,7 @@ impl ApiClient for HttpApiClient {
     }
 
     async fn get_seeds(
-        &mut self,
+        &self,
         pk: SumParticipantPublicKey,
     ) -> Result<Option<UpdateSeedDict>, Self::Error> {
         let url = format!("{}/seeds", self.address);
@@ -179,9 +191,15 @@ impl ApiClient for HttpApiClient {
         }
     }
 
-    async fn get_mask_length(&mut self) -> Result<Option<u64>, Self::Error> {
+    async fn get_mask_length(&self) -> Result<Option<u64>, Self::Error> {
         let url = format!("{}/length", self.address);
-        let resp = self.client.get(&url).send().await?.error_for_status()?;
+        let resp = self
+            .client
+            .clone()
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?;
         match resp.status() {
             StatusCode::OK => Ok(Some(resp.text().await?.parse()?)),
             StatusCode::NO_CONTENT => Ok(None),
@@ -189,9 +207,16 @@ impl ApiClient for HttpApiClient {
         }
     }
 
-    async fn get_model(&mut self) -> Result<Option<Model>, Self::Error> {
+    async fn get_model(&self) -> Result<Option<Model>, Self::Error> {
         let url = format!("{}/model", self.address);
-        let resp = self.client.get(&url).send().await?.error_for_status()?;
+        let resp = self
+            .client
+            .clone()
+            .clone()
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?;
         match resp.status() {
             StatusCode::OK => {
                 let body = resp.bytes().await?;
@@ -202,9 +227,10 @@ impl ApiClient for HttpApiClient {
         }
     }
 
-    async fn send_message(&mut self, msg: Vec<u8>) -> Result<(), Self::Error> {
+    async fn send_message(&self, msg: Vec<u8>) -> Result<(), Self::Error> {
         let url = format!("{}/message", self.address);
         self.client
+            .clone()
             .post(&url)
             .body(msg)
             .send()

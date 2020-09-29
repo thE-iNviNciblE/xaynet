@@ -33,7 +33,7 @@ pub struct ClientState<Type> {
 impl<Type> ClientState<Type> {
     async fn check_round_freshness<T: ApiClient>(
         &self,
-        api: &mut T,
+        api: &T,
     ) -> Result<(), ClientError<T::Error>> {
         debug!("fetching round parameters");
         let round_params = api.get_round_params().await?;
@@ -52,7 +52,7 @@ impl<Type> ClientState<Type> {
 
     async fn send_message<T: ApiClient>(
         &self,
-        api: &mut T,
+        api: &T,
         data: Vec<u8>,
     ) -> Result<(), <T as ApiClient>::Error> {
         if data.len() > MAX_MESSAGE_SIZE {
@@ -61,7 +61,7 @@ impl<Type> ClientState<Type> {
             for id in 0..chunker.nb_chunks() {
                 let chunk = chunker.get_chunk(id);
                 debug!("sending chunk {}", id);
-                api.send_message(chunk.to_vec()).await?;
+                let fut = async move { api.send_message(chunk.to_vec()).await? };
                 debug!("chunk {} sent", id);
             }
         } else {
@@ -79,7 +79,7 @@ impl ClientState<Awaiting> {
         }
     }
 
-    async fn next<T: ApiClient>(mut self, api: &mut T) -> ClientStateMachine {
+    async fn next<T: ApiClient>(mut self, api: &T) -> ClientStateMachine {
         info!("awaiting task");
         let new_round_param = match api.get_round_params().await {
             Ok(new_round_param) => new_round_param,
@@ -126,7 +126,7 @@ impl ClientState<Sum> {
         }
     }
 
-    async fn next<T: ApiClient>(mut self, api: &mut T) -> ClientStateMachine {
+    async fn next<T: ApiClient>(mut self, api: &T) -> ClientStateMachine {
         info!("selected to sum");
 
         match self.run(api).await {
@@ -139,7 +139,7 @@ impl ClientState<Sum> {
         }
     }
 
-    async fn run<T: ApiClient>(&mut self, api: &mut T) -> Result<(), ClientError<T::Error>> {
+    async fn run<T: ApiClient>(&mut self, api: &T) -> Result<(), ClientError<T::Error>> {
         self.check_round_freshness(api).await?;
 
         let sum_msg = self.participant.compose_sum_message(self.round_params.pk);
@@ -168,7 +168,7 @@ impl ClientState<Update> {
 
     async fn next<L: LocalModel, T: ApiClient>(
         mut self,
-        api: &mut T,
+        api: &T,
         local_model: &mut L,
     ) -> ClientStateMachine {
         info!("selected to update");
@@ -184,7 +184,7 @@ impl ClientState<Update> {
 
     async fn run<L: LocalModel, T: ApiClient>(
         &mut self,
-        api: &mut T,
+        api: &T,
         local_model: &mut L,
     ) -> Result<(), ClientError<T::Error>> {
         self.check_round_freshness(api).await?;
@@ -223,7 +223,7 @@ impl ClientState<Sum2> {
         }
     }
 
-    async fn next<T: ApiClient>(mut self, api: &mut T) -> ClientStateMachine {
+    async fn next<T: ApiClient>(mut self, api: &T) -> ClientStateMachine {
         info!("selected to sum2");
 
         match self.run(api).await {
@@ -235,7 +235,7 @@ impl ClientState<Sum2> {
         }
     }
 
-    async fn run<T: ApiClient>(&mut self, api: &mut T) -> Result<(), ClientError<T::Error>> {
+    async fn run<T: ApiClient>(&mut self, api: &T) -> Result<(), ClientError<T::Error>> {
         self.check_round_freshness(api).await?;
 
         debug!("polling for model/mask length");
@@ -291,7 +291,7 @@ impl ClientStateMachine {
         .into())
     }
 
-    pub async fn next<L: LocalModel, T: ApiClient>(self, api: &mut T, local_model: &mut L) -> Self {
+    pub async fn next<L: LocalModel, T: ApiClient>(self, api: &T, local_model: &mut L) -> Self {
         match self {
             ClientStateMachine::Awaiting(state) => state.next(api).await,
             ClientStateMachine::Sum(state) => state.next(api).await,
