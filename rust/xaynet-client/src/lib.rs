@@ -45,8 +45,6 @@ extern crate async_trait;
 extern crate serde;
 #[macro_use]
 extern crate tracing;
-#[macro_use]
-extern crate pin_project;
 
 use std::time::Duration;
 

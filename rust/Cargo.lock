@@ -2862,7 +2862,6 @@ dependencies = [
  "bytes",
  "derive_more",
  "futures",
- "pin-project",
  "reqwest",
  "serde 1.0.116",
  "sodiumoxide",
