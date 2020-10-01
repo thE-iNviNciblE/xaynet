@@ -45,6 +45,8 @@ extern crate async_trait;
 extern crate serde;
 #[macro_use]
 extern crate tracing;
+#[macro_use]
+extern crate pin_project;
 
 use std::time::Duration;
 
@@ -53,13 +55,12 @@ use tokio::time;
 
 use xaynet_core::{crypto::ByteObject, mask::Model, CoordinatorPublicKey, InitError};
 
+pub mod api;
 #[doc(hidden)]
 pub mod mobile_client;
-
-pub mod api;
-
 mod participant;
 pub use participant::{Participant, Task};
+pub(crate) mod utils;
 
 #[derive(Clone, Debug)]
 /// A primitive model cached on the heap.
