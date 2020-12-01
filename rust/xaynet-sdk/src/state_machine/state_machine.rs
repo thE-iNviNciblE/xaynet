@@ -6,6 +6,7 @@ use super::{
     IntoPhase,
     NewRound,
     Phase,
+    Sending,
     SerializableState,
     SharedState,
     State,
@@ -40,6 +41,8 @@ pub enum StateMachine {
     Update(Phase<Update>),
     /// PET state machine in the "sum2" phase
     Sum2(Phase<Sum2>),
+    /// PET status machine in the "sending message" phase
+    Sending(Phase<Sending>),
 }
 
 impl StateMachine {
@@ -51,6 +54,7 @@ impl StateMachine {
             StateMachine::Sum(phase) => phase.step().await,
             StateMachine::Update(phase) => phase.step().await,
             StateMachine::Sum2(phase) => phase.step().await,
+            StateMachine::Sending(phase) => phase.step().await,
         }
     }
 
@@ -63,6 +67,7 @@ impl StateMachine {
             StateMachine::Sum(phase) => phase.state.into(),
             StateMachine::Update(phase) => phase.state.into(),
             StateMachine::Sum2(phase) => phase.state.into(),
+            StateMachine::Sending(phase) => phase.state.into(),
         }
     }
 }
@@ -112,6 +117,7 @@ impl StateMachine {
             SerializableState::Sum(state) => state.into_phase(io).into(),
             SerializableState::Sum2(state) => state.into_phase(io).into(),
             SerializableState::Update(state) => state.into_phase(io).into(),
+            SerializableState::Sending(state) => state.into_phase(io).into(),
         }
     }
 }

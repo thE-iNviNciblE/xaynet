@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::{debug, error, info, warn};
 
-use super::{Awaiting, NewRound, Sum, Sum2, Update, IO};
+use super::{Awaiting, NewRound, Sending, Sum, Sum2, Update, IO};
 use crate::{
     settings::{MaxMessageSize, PetSettings},
     state_machine::{StateMachine, TransitionOutcome},
@@ -223,26 +223,7 @@ impl<P> Phase<P> {
         State::new(self.state.shared, Awaiting).into_phase(self.io)
     }
 
-    /// Send the message created by the given message encoder.
-    ///
-    /// If the message is split in multiple parts, they are sent sequentially. If a
-    /// single part fails, the remaining parts are not sent. There is no retry
-    /// mechanism.
-    pub async fn send_message(&mut self, encoder: MessageEncoder) -> Result<(), SendMessageError> {
-        for part in encoder {
-            let data = self.state.shared.round_params.pk.encrypt(part.as_slice());
-            self.io.send_message(data).await.map_err(|e| {
-                error!("failed to send message: {:?}", e);
-                SendMessageError
-            })?
-        }
-        Ok(())
-    }
-
-    /// Instantiate a message encoder for the given payload.
-    ///
-    /// The encoder takes care of converting the given `payload` into one or several
-    /// signed and encrypted PET messages.
+    /// Transition to the message sending phase
     pub fn message_encoder(&self, payload: Payload) -> MessageEncoder {
         MessageEncoder::new(
             self.state.shared.keys.clone(),
@@ -258,6 +239,22 @@ impl<P> Phase<P> {
         // machine, we never manually create such payloads so
         // unwrapping is fine
         .unwrap()
+    }
+
+    /// Send the message created by the given message encoder.
+    ///
+    /// If the message is split in multiple parts, they are sent sequentially. If a
+    /// single part fails, the remaining parts are not sent. There is no retry
+    /// mechanism.
+    pub async fn send_message(&mut self, encoder: MessageEncoder) -> Result<(), SendMessageError> {
+        for part in encoder {
+            let data = self.state.shared.round_params.pk.encrypt(part.as_slice());
+            self.io.send_message(data).await.map_err(|e| {
+                error!("failed to send message: {:?}", e);
+                SendMessageError
+            })?
+        }
+        Ok(())
     }
 
     #[cfg(test)]
@@ -310,6 +307,7 @@ pub enum SerializableState {
     // FIXME: this should be boxed...
     Update(State<Update>),
     Sum2(State<Sum2>),
+    Sending(State<Sending>),
 }
 
 impl<P> Into<SerializableState> for Phase<P>
