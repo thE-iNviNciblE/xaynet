@@ -1,0 +1,41 @@
+[log]
+filter = "xaynet=debug,http=warn,info"
+
+[api]
+bind_address = "0.0.0.0:8081"
+tls_certificate = "/app/ssl/tls.pem"
+tls_key = "/app/ssl/tls.key"
+
+[pet]
+min_sum_count = 2000
+min_update_count = 2000
+min_sum_time = 10
+min_update_time = 5
+max_sum_time = 3600
+max_update_time = 3600
+sum = 0.5
+update = 0.9
+
+[mask]
+group_type = "Prime"
+data_type = "F32"
+bound_type = "B0"
+model_type = "M3"
+
+[model]
+length = 1
+
+[metrics.influxdb]
+url = "http://influxdb:8086"
+db = "metrics"
+
+[redis]
+url = "redis://127.0.0.1/"
+
+[s3]
+access_key = "minio"
+secret_access_key = "minio123"
+region = ["minio", "http://minio:9000"]
+
+[restore]
+enable = false

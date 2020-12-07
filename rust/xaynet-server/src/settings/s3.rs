@@ -8,7 +8,7 @@ use serde::{
 };
 use validator::{Validate, ValidationError};
 
-#[derive(Debug, Validate, Deserialize)]
+#[derive(Debug, Validate, Deserialize, Clone)]
 /// S3 settings.
 pub struct S3Settings {
     /// The [access key ID](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html).
@@ -81,7 +81,7 @@ pub struct S3Settings {
     pub buckets: S3BucketsSettings,
 }
 
-#[derive(Debug, Validate, Deserialize)]
+#[derive(Debug, Validate, Deserialize, Clone)]
 pub struct S3BucketsSettings {
     /// The bucket name in which the global models are stored.
     /// Defaults to `global-models`.
